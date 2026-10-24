@@ -6,7 +6,7 @@ PicoRuby の mrbgem です。Phomemo T02 感熱プリンターを BLE で制御�
 - 状態（紙、カバー、電池、温度）を取得します。
 - 送るコマンドは allowlist にあるものだけです。`1f 11 <op>` は、`op` が 0x14 以下のものだけを送ります。
 - BLE は `picoruby-ble` の公開 API と、上書き用のフック（`advertising_report_callback`、`packet_callback`）だけで使います。
-- 実機での動作は、macOS の R2P2-darwin（port-darwin）で確かめています。
+- 実機での動作は、macOS の [R2P2-darwin](https://github.com/bash0C7/R2P2-darwin) と、その [port-darwin](https://github.com/bash0C7/picoruby/tree/port-darwin) ブランチの picoruby で確かめています。
 
 Mac アプリと CLI は [bash0C7/thermal-printer](https://github.com/bash0C7/thermal-printer) にあります。
 
@@ -56,7 +56,7 @@ transport は `connect`、`gatt_report`、`subscribe`、`write_chunk`、`poll_no
 
 ## ビルドに加える
 
-R2P2-darwin のビルド設定に、gem のディレクトリを足します。
+[R2P2-darwin](https://github.com/bash0C7/R2P2-darwin) のビルド設定に、gem のディレクトリを足します。
 
 ```ruby
 conf.gem core: "picoruby-ble"
@@ -67,7 +67,7 @@ conf.gem gemdir: "/path/to/picoruby-phomemo-thermal-printer"
 ## テスト
 
 ```
-mise exec ruby@4.0.5 -- rake vendor:setup   # R2P2-darwin と picoruby を取得
+mise exec ruby@4.0.5 -- rake vendor:setup   # R2P2-darwin と、port-darwin ブランチの picoruby を取得
 mise exec ruby@4.0.5 -- rake test
 ```
 
