@@ -30,7 +30,7 @@ module PhomemoThermalPrinter
       reset
       @name_prefix = name_prefix
       link = @link
-      @loop = Task.new { link.scan(timeout_ms: LOOP_TIMEOUT_MS, stop_state: :no_stop) }
+      @loop = Task.new { link.scan(scan_type: :active, timeout_ms: LOOP_TIMEOUT_MS, stop_state: :no_stop) }
       deadline = Machine.board_millis + timeout_ms
       while !linked? && Machine.board_millis < deadline
         sleep_ms(STEP_MS)
