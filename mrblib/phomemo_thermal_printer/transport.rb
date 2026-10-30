@@ -97,7 +97,7 @@ module PhomemoThermalPrinter
 
     def stop_loop
       return unless @loop
-      @loop.terminate
+      @loop.close
       @loop = nil
       @link.hci_power_control(BLE::HCI_POWER_OFF)
     end
