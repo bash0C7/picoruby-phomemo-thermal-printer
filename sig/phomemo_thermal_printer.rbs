@@ -7,6 +7,7 @@ module PhomemoThermalPrinter
 
   interface _Transport
     def connect: (String name_prefix, Integer timeout_ms) -> bool
+    def connect_failure: () -> String
     def gatt_report: () -> Hash[String, bool]
     def subscribe: (Integer settle_ms) -> bool
     def write_chunk: (String bytes) -> void

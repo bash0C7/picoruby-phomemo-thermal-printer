@@ -41,6 +41,7 @@ module PhomemoThermalPrinter
       @job_started = false
       @last_write_ms = nil
       @error_hint = nil
+      @detail = nil
       @result = nil
     end
 
@@ -60,7 +61,7 @@ module PhomemoThermalPrinter
 
     def build_result(error, start)
       r = @result
-      r.fail_with(error, @error_hint) if error
+      r.fail_with(error, @error_hint, @detail) if error
       r.status = @status if @status_seen
       battery = @status["battery"]
       r.add_warning("battery_low") if battery && battery <= LOW_BATTERY_WARN
@@ -73,7 +74,10 @@ module PhomemoThermalPrinter
     end
 
     def open_link
-      return "not_found" unless @transport.connect(@device, @connect_timeout_ms)
+      unless @transport.connect(@device, @connect_timeout_ms)
+        @detail = @transport.connect_failure
+        return "not_found"
+      end
       @connected = true
       report = @transport.gatt_report
       return "wrong_device" unless report["service"] && report["write"] && report["notify"]

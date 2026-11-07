@@ -3,6 +3,9 @@ module PhomemoThermalPrinter
     HCI_EVENT_DISCONNECTION_COMPLETE = 0x05
     HCI_EVENT_LE_META = 0x3E
     HCI_SUBEVENT_LE_CONNECTION_COMPLETE = 0x01
+    REASON_AUTH_FAILED = 0x05
+    REASON_PAIRING_INFO_REMOVED = 0x06
+    REASON_CONNECTION_TIMEOUT = 0x08
     GATT_EVENT_NOTIFICATION = 0xA7
     NOTIFICATION_HEADER_SIZE = 12
     PROP_WRITE_WITHOUT_RESPONSE = 0x04
@@ -17,6 +20,26 @@ module PhomemoThermalPrinter
       type = pkt.getbyte(0)
       return true if type == HCI_EVENT_DISCONNECTION_COMPLETE
       type == HCI_EVENT_LE_META && pkt.getbyte(2) == HCI_EVENT_DISCONNECTION_COMPLETE
+    end
+
+    def self.disconnect_reason(pkt)
+      type = pkt.getbyte(0)
+      if type == HCI_EVENT_LE_META && pkt.getbyte(2) == HCI_EVENT_DISCONNECTION_COMPLETE
+        return pkt.bytesize >= 4 ? pkt.getbyte(3) : nil
+      end
+      if type == HCI_EVENT_DISCONNECTION_COMPLETE
+        return pkt.bytesize >= 6 ? pkt.getbyte(5) : nil
+      end
+      nil
+    end
+
+    def self.connect_failure_detail(matched, lost, reason)
+      return "name_not_seen" unless matched
+      return "connect_timeout" unless lost
+      return "pairing_info_removed" if reason == REASON_PAIRING_INFO_REMOVED
+      return "auth_failed" if reason == REASON_AUTH_FAILED
+      return "connect_timeout" if reason == REASON_CONNECTION_TIMEOUT
+      "link_dropped"
     end
 
     def self.connection_handle(pkt)

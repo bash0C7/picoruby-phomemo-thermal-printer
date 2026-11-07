@@ -52,6 +52,18 @@ result = session.run(job)
 
 `StatusSession#query` は、印字せずに状態だけを取得します。
 
+`Result#to_h` の `error` が `not_found` のとき、`detail` に接続できなかった原因が入ります。それ以外のエラーと成功では `null` です。
+
+| `detail` | 内容 |
+|---|---|
+| `name_not_seen` | スキャンで T02 の名前が一度も一致しなかった |
+| `pairing_info_removed` | 名前は一致したが、接続が確立する前に HCI 理由 0x06 で切れた |
+| `auth_failed` | 名前は一致したが、接続が確立する前に HCI 理由 0x05 で切れた |
+| `connect_timeout` | 名前は一致したが、接続が確立する前に HCI 理由 0x08 で切れた、または切断も接続成立もないまま時間切れになった |
+| `link_dropped` | 名前は一致したが、接続が確立する前に、0x06、0x05、0x08 以外の理由または理由なしで切れた |
+
+`hint` は `detail` ごとの英文になります（`name_not_seen` は `not_found` の文です）。
+
 transport は `connect`、`gatt_report`、`subscribe`、`write_chunk`、`poll_notifications`、`disconnect` を持つオブジェクトです（`sig/phomemo_thermal_printer.rbs`）。テストでは `test/mock/fake_transport.rb` に置き換えます。
 
 ## ビルドに加える

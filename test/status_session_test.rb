@@ -98,6 +98,8 @@ class StatusSessionTest < Picotest::Test
     t = fake(found: false)
     assert_equal "not_found", query(t).error
     assert_equal 0, t.writes.size
+    t = fake(found: false, connect_failure: "auth_failed")
+    assert_equal "auth_failed", query(t).detail
     t = fake(gatt: {"service" => true, "write" => true, "notify" => false})
     assert_equal "wrong_device", query(t).error
     assert_equal 0, t.writes.size
@@ -112,6 +114,7 @@ class StatusSessionTest < Picotest::Test
     h = query(fake(replies: all_replies)).to_h(exit_code: 0)
     assert_equal "status", h["mode"]
     assert_equal true, h["ok"]
+    assert_nil h["detail"]
     assert_nil h["job"]
     assert_nil h["completion"]
     assert_equal [], h["warnings"]
