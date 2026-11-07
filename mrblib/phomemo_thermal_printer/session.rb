@@ -16,12 +16,13 @@ module PhomemoThermalPrinter
       firmware: "firmware", serial: "serial", auto_off: "auto_off"
     }
 
-    def initialize(transport, clock:, sleeper:, device: "T02", connect_timeout_ms: CONNECT_TIMEOUT_MS)
+    def initialize(transport, clock:, sleeper:, device: "T02", connect_timeout_ms: CONNECT_TIMEOUT_MS, hold: false)
       @transport = transport
       @clock = clock
       @sleeper = sleeper
       @device = device
       @connect_timeout_ms = connect_timeout_ms
+      @hold = hold
       @decoder = StatusDecoder.new
       @status = {
         "battery" => nil, "paper" => nil, "cover" => nil, "temperature" => nil,
@@ -51,10 +52,12 @@ module PhomemoThermalPrinter
       start = @clock.now_ms
       @result = Result.new(mode)
       error = nil
+      kept = false
       begin
         error = execute(job)
+        kept = @hold && error.nil?
       ensure
-        @transport.disconnect if @connected
+        @transport.disconnect if @connected && !kept
       end
       build_result(error, start)
     end
@@ -74,7 +77,7 @@ module PhomemoThermalPrinter
     end
 
     def open_link
-      unless @transport.connect(@device, @connect_timeout_ms)
+      unless (@hold && @transport.linked?) || @transport.connect(@device, @connect_timeout_ms)
         @detail = @transport.connect_failure
         return "not_found"
       end
@@ -222,8 +225,9 @@ module PhomemoThermalPrinter
     DISCONNECTED_IN_JOB_HINT = "The printer disconnected during the job and may hold an unfinished raster block. Turn the printer off and on before the next print."
 
     def initialize(transport, clock:, sleeper:, device: "T02", chunk: 128, interval: 20, density: 4,
-                   connect_timeout_ms: CONNECT_TIMEOUT_MS)
-      super(transport, clock: clock, sleeper: sleeper, device: device, connect_timeout_ms: connect_timeout_ms)
+                   connect_timeout_ms: CONNECT_TIMEOUT_MS, hold: false)
+      super(transport, clock: clock, sleeper: sleeper, device: device, connect_timeout_ms: connect_timeout_ms,
+            hold: hold)
       @chunk = chunk
       @interval = interval
       @density = density

@@ -31,6 +31,25 @@ class StatusSessionTest < Picotest::Test
     assert_equal "3.0.7", r.status["firmware"]
   end
 
+  def held_query(t)
+    PhomemoThermalPrinter::StatusSession.new(t, clock: t.clock, sleeper: t.sleeper, hold: true).query
+  end
+
+  def test_a_held_status_that_succeeds_keeps_the_link
+    t = fake(replies: all_replies)
+    r = held_query(t)
+    assert_true r.ok
+    assert_equal 0, t.disconnects
+    assert_true t.linked?
+  end
+
+  def test_a_held_status_that_finds_nothing_leaves_no_link
+    t = fake(found: false)
+    r = held_query(t)
+    assert_equal "not_found", r.error
+    assert_false t.linked?
+  end
+
   def test_every_status_field_is_reported
     r = query(fake(replies: all_replies))
     assert_equal true, r.ok

@@ -13,6 +13,7 @@ module PhomemoThermalPrinter
     def write_chunk: (String bytes) -> void
     def poll_notifications: () -> Array[String]?
     def disconnect: () -> void
+    def linked?: () -> bool
   end
 
   interface _Clock

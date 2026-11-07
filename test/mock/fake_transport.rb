@@ -67,14 +67,24 @@ class FakeTransport
     @last_job_write_ms = nil
     @completion_sent = false
     @lost = false
+    @linked = false
     @polls = 0
   end
 
   def connect(name_prefix, timeout_ms)
     @connects << [name_prefix, timeout_ms]
+    @linked = @found
     return true if @found
     @clock.advance(timeout_ms)
     false
+  end
+
+  def linked?
+    @linked && !@lost
+  end
+
+  def lose_link
+    @lost = true
   end
 
   def connect_failure
@@ -102,17 +112,15 @@ class FakeTransport
     end
     @writes << [@clock.now_ms, bytes]
     push_all(["\x01\x01"]) if @acks && @notify_on
-    if @job_started
+    reply = @notify_on ? @replies[bytes] : nil
+    if reply
+      push_all(reply.is_a?(Array) ? reply : [reply])
+    elsif @job_started
       @job_writes += 1
       @last_job_write_ms = @clock.now_ms
       event = @events_at_write[@job_writes]
       push_all([event]) if event
       @lost = true if @disconnect_at_write == @job_writes
-    elsif @notify_on
-      reply = @replies[bytes]
-      if reply
-        push_all(reply.is_a?(Array) ? reply : [reply])
-      end
     end
   end
 
@@ -142,6 +150,7 @@ class FakeTransport
 
   def disconnect
     @disconnects += 1
+    @linked = false
   end
 
   def job_writes
