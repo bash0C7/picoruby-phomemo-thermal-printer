@@ -36,8 +36,9 @@ class FakeTransport
                  completion_after_ms: 1500, completion: "\x1a\x0f\x0c", disconnect_at_write: nil,
                  connect_notifications: SUBSCRIBE_NOTIFICATIONS, notify_from_subscribe: 1,
                  disconnect_at_poll: nil, acks: true, poll_error_at_write: nil, poll_error_repeats: false,
-                 poll_error_ms_after_write: nil)
+                 poll_error_ms_after_write: nil, connect_failure: "name_not_seen")
     @clock = clock
+    @connect_failure = connect_failure
     @sleeper = FakeSleeper.new(clock)
     @found = found
     @gatt = gatt
@@ -74,6 +75,10 @@ class FakeTransport
     return true if @found
     @clock.advance(timeout_ms)
     false
+  end
+
+  def connect_failure
+    @connect_failure
   end
 
   def gatt_report

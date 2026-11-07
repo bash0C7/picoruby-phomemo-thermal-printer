@@ -79,6 +79,53 @@ class PacketTest < Picotest::Test
     assert_false pk.disconnect?(bytes(0x3E, 0x01))
   end
 
+  def test_le_meta_disconnect_yields_the_reason_byte
+    assert_equal 0x06, pk.disconnect_reason(bytes(0x3E, 0x02, 0x05, 0x06))
+    assert_equal 0x3e, pk.disconnect_reason(bytes(0x3E, 0x02, 0x05, 0x3e))
+  end
+
+  def test_plain_hci_disconnect_yields_the_reason_byte
+    assert_equal 0x13, pk.disconnect_reason(bytes(0x05, 4, 0x40, 0x00, 0x00, 0x13))
+  end
+
+  def test_short_disconnect_packets_have_no_reason
+    assert_nil pk.disconnect_reason(bytes(0x3E, 0x01, 0x05))
+    assert_nil pk.disconnect_reason(bytes(0x05, 4, 0x40, 0x00, 0x00))
+    assert_nil pk.disconnect_reason(bytes(0x05))
+  end
+
+  def test_packets_that_are_not_disconnects_have_no_reason
+    assert_nil pk.disconnect_reason(bytes(0x3E, 0x02, 0x01, 0x00, 0x40, 0x00))
+    assert_nil pk.disconnect_reason(notify_packet(7, bytes(0x01, 0x01)))
+    assert_nil pk.disconnect_reason("")
+  end
+
+  def test_an_unseen_name_is_name_not_seen
+    assert_equal "name_not_seen", pk.connect_failure_detail(false, false, nil)
+    assert_equal "name_not_seen", pk.connect_failure_detail(false, true, 0x06)
+  end
+
+  def test_reason_06_after_a_matched_name_is_pairing_info_removed
+    assert_equal "pairing_info_removed", pk.connect_failure_detail(true, true, 0x06)
+  end
+
+  def test_reason_05_after_a_matched_name_is_auth_failed
+    assert_equal "auth_failed", pk.connect_failure_detail(true, true, 0x05)
+  end
+
+  def test_reason_08_after_a_matched_name_is_connect_timeout
+    assert_equal "connect_timeout", pk.connect_failure_detail(true, true, 0x08)
+  end
+
+  def test_a_matched_name_with_no_disconnect_is_connect_timeout
+    assert_equal "connect_timeout", pk.connect_failure_detail(true, false, nil)
+  end
+
+  def test_other_or_missing_reasons_after_a_matched_name_are_link_dropped
+    assert_equal "link_dropped", pk.connect_failure_detail(true, true, 0x13)
+    assert_equal "link_dropped", pk.connect_failure_detail(true, true, nil)
+  end
+
   def test_notification_packet_yields_handle_and_value
     value = bytes(0x1a, 0x06, 0x89)
     assert_equal [0x2a, value], pk.notification(notify_packet(0x2a, value))

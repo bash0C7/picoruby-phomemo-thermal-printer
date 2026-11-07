@@ -52,10 +52,15 @@ module PhomemoThermalPrinter
       @handle = handle if handle
       if Packet.disconnect?(event_packet)
         @lost = true
+        @lost_reason = Packet.disconnect_reason(event_packet)
         @handle = nil
       end
       note = Packet.notification(event_packet)
       @inbox << note[1] if note
+    end
+
+    def connect_failure
+      Packet.connect_failure_detail(@reported, @lost, @lost_reason)
     end
 
     def gatt_report
@@ -107,6 +112,7 @@ module PhomemoThermalPrinter
       @reported = false
       @handle = nil
       @lost = false
+      @lost_reason = nil
       @inbox = []
       @write_handle = nil
       @cccd_handle = nil

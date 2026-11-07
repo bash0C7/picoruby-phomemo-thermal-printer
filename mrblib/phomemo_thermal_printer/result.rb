@@ -13,12 +13,19 @@ module PhomemoThermalPrinter
       "low_battery" => "The battery is at 5% or less. Charge the printer.",
     }
 
-    attr_reader :mode, :error, :hint, :warnings, :completion_state, :after_send_ms
+    DETAIL_HINTS = {
+      "pairing_info_removed" => "The T02 was found but refused the connection because it no longer holds this device's pairing information. Remove the T02 from this device's Bluetooth devices, power-cycle it, and pair again.",
+      "auth_failed" => "The T02 was found but authentication failed. Remove the T02 from this device's Bluetooth devices and pair again.",
+      "connect_timeout" => "The T02 was found but the connection did not complete in time. Move closer, power-cycle the T02, and try again.",
+      "link_dropped" => "The T02 was found but the connection dropped before it was established. Power-cycle the T02 and try again.",
+    }
+
+    attr_reader :mode, :error, :hint, :detail, :warnings, :completion_state, :after_send_ms
     attr_accessor :status, :job, :notify, :elapsed_ms
 
-    def self.failure(mode, error, hint: nil, elapsed_ms: 0)
+    def self.failure(mode, error, hint: nil, detail: nil, elapsed_ms: 0)
       result = new(mode)
-      result.fail_with(error, hint)
+      result.fail_with(error, hint, detail)
       result.elapsed_ms = elapsed_ms
       result
     end
@@ -27,6 +34,7 @@ module PhomemoThermalPrinter
       @mode = mode
       @error = nil
       @hint = nil
+      @detail = nil
       @warnings = []
       @status = nil
       @job = nil
@@ -40,9 +48,10 @@ module PhomemoThermalPrinter
       @error.nil?
     end
 
-    def fail_with(error, hint = nil)
+    def fail_with(error, hint = nil, detail = nil)
       @error = error
-      @hint = hint || HINTS[error]
+      @detail = detail
+      @hint = hint || DETAIL_HINTS[detail] || HINTS[error]
     end
 
     def add_warning(name)
@@ -67,6 +76,7 @@ module PhomemoThermalPrinter
         "mode" => @mode,
         "ok" => ok,
         "error" => @error,
+        "detail" => @detail,
         "exit_code" => exit_code,
         "hint" => @hint,
         "warnings" => @warnings,

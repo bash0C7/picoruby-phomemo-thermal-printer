@@ -168,6 +168,30 @@ class PrintSessionTest < Picotest::Test
     assert_equal ["T02", 10_000], t.connects[0]
   end
 
+  def test_not_found_carries_the_transports_connect_failure_as_detail
+    t = fake(found: false, connect_failure: "pairing_info_removed")
+    r = session(t).run(job(10))
+    assert_equal "not_found", r.error
+    assert_equal "pairing_info_removed", r.detail
+    assert_equal PhomemoThermalPrinter::Result::DETAIL_HINTS["pairing_info_removed"], r.hint
+    assert_equal "pairing_info_removed", r.to_h(exit_code: 10)["detail"]
+  end
+
+  def test_not_found_with_an_unseen_name_keeps_the_not_found_hint
+    t = fake(found: false)
+    r = session(t).run(job(10))
+    assert_equal "name_not_seen", r.detail
+    assert_equal PhomemoThermalPrinter::Result::HINTS["not_found"], r.hint
+  end
+
+  def test_other_errors_have_no_detail
+    t = fake(gatt: {"service" => false, "write" => false, "notify" => false})
+    r = session(t).run(job(10))
+    assert_equal "wrong_device", r.error
+    assert_nil r.detail
+    assert_nil r.to_h(exit_code: 11)["detail"]
+  end
+
   def test_a_t02_without_ff00_gets_nothing_at_all
     t = fake(gatt: {"service" => false, "write" => false, "notify" => false})
     r = session(t).run(job(10))
@@ -777,10 +801,11 @@ end
 
 class ResultTest < Picotest::Test
   def test_a_failure_carries_the_hint_for_its_error
-    r = PhomemoThermalPrinter::Result.failure("print", "not_found", elapsed_ms: 10_012)
+    r = PhomemoThermalPrinter::Result.failure("print", "not_found", detail: "name_not_seen", elapsed_ms: 10_012)
     h = r.to_h(exit_code: 10)
     assert_equal false, h["ok"]
     assert_equal "not_found", h["error"]
+    assert_equal "name_not_seen", h["detail"]
     assert_equal 10, h["exit_code"]
     assert_equal "T02 was not found. Press the power button to wake it, disconnect the official app, and check that Bluetooth access is allowed for this app.", h["hint"]
     assert_nil h["status"]
@@ -792,12 +817,31 @@ class ResultTest < Picotest::Test
 
   def test_the_hash_has_the_contract_keys_in_order
     h = PhomemoThermalPrinter::Result.new("status").to_h(exit_code: 0)
-    assert_equal ["version", "mode", "ok", "error", "exit_code", "hint", "warnings", "status", "job",
+    assert_equal ["version", "mode", "ok", "error", "detail", "exit_code", "hint", "warnings", "status", "job",
                   "notify", "completion", "elapsed_ms"], h.keys
+    assert_nil h["detail"]
     assert_equal 1, h["version"]
     assert_equal "status", h["mode"]
     assert_equal true, h["ok"]
     assert_equal [], h["warnings"]
+  end
+
+  def test_each_detail_has_its_own_hint
+    details = ["pairing_info_removed", "auth_failed", "connect_timeout", "link_dropped"]
+    i = 0
+    while i < details.size
+      r = PhomemoThermalPrinter::Result.failure("print", "not_found", detail: details[i])
+      assert_equal details[i], r.to_h(exit_code: 10)["detail"]
+      assert_equal PhomemoThermalPrinter::Result::DETAIL_HINTS[details[i]], r.hint
+      i += 1
+    end
+    assert_equal "The T02 was found but authentication failed. Remove the T02 from this device's Bluetooth devices and pair again.",
+                 PhomemoThermalPrinter::Result.failure("print", "not_found", detail: "auth_failed").hint
+  end
+
+  def test_an_explicit_hint_wins_over_the_detail_hint
+    r = PhomemoThermalPrinter::Result.failure("print", "not_found", hint: "custom", detail: "auth_failed")
+    assert_equal "custom", r.hint
   end
 
   def test_an_explicit_hint_wins_over_the_table
