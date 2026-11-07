@@ -20,9 +20,10 @@ module PhomemoThermalPrinter
     LOOP_TIMEOUT_MS = 600_000
     STEP_MS = 20
 
-    def initialize
+    def initialize(loop_timeout_ms: LOOP_TIMEOUT_MS)
       @link = Link.new(self)
       @loop = nil
+      @loop_timeout_ms = loop_timeout_ms
       reset
     end
 
@@ -30,7 +31,8 @@ module PhomemoThermalPrinter
       reset
       @name_prefix = name_prefix
       link = @link
-      @loop = Task.new { link.scan(scan_type: :active, timeout_ms: LOOP_TIMEOUT_MS, stop_state: :no_stop) }
+      loop_timeout_ms = @loop_timeout_ms
+      @loop = Task.new { link.scan(scan_type: :active, timeout_ms: loop_timeout_ms, stop_state: :no_stop) }
       deadline = Machine.board_millis + timeout_ms
       while !linked? && Machine.board_millis < deadline
         sleep_ms(STEP_MS)
@@ -94,11 +96,11 @@ module PhomemoThermalPrinter
       nil
     end
 
-    private
-
     def linked?
-      !@handle.nil? && !@lost && @link.state == :TC_IDLE
+      !@loop.nil? && !@handle.nil? && !@lost && @link.state == :TC_IDLE
     end
+
+    private
 
     def stop_loop
       return unless @loop

@@ -52,6 +52,8 @@ result = session.run(job)
 
 `StatusSession#query` は、印字せずに状態だけを取得します。
 
+`hold: true` を渡したセッションは、成功したら接続を切りません。次のセッションに同じ transport を渡すと、繋がっていれば接続を飛ばして、購読と状態の確認から始めます。失敗したセッションは接続を切ります。`Transport.new(loop_timeout_ms:)` で、接続を保てる時間の上限（既定 600000 ms）を変えられます。
+
 `Result#to_h` の `error` が `not_found` のとき、`detail` に接続できなかった原因が入ります。それ以外のエラーと成功では `null` です。
 
 | `detail` | 内容 |
@@ -64,7 +66,7 @@ result = session.run(job)
 
 `hint` は `detail` ごとの英文になります（`name_not_seen` は `not_found` の文です）。
 
-transport は `connect`、`gatt_report`、`subscribe`、`write_chunk`、`poll_notifications`、`disconnect` を持つオブジェクトです（`sig/phomemo_thermal_printer.rbs`）。テストでは `test/mock/fake_transport.rb` に置き換えます。
+transport は `connect`、`gatt_report`、`subscribe`、`write_chunk`、`poll_notifications`、`disconnect`、`linked?` を持つオブジェクトです（`sig/phomemo_thermal_printer.rbs`）。テストでは `test/mock/fake_transport.rb` に置き換えます。
 
 ## ビルドに加える
 

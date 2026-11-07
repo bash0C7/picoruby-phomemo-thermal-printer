@@ -789,6 +789,45 @@ class PrintSessionTest < Picotest::Test
     assert_equal 0, t.disconnects
   end
 
+  def held(t)
+    PhomemoThermalPrinter::PrintSession.new(t, clock: t.clock, sleeper: t.sleeper, hold: true)
+  end
+
+  def test_a_held_print_that_succeeds_keeps_the_link
+    t = fake(replies: ok_replies)
+    r = held(t).run(job(10))
+    assert_true r.ok
+    assert_equal 0, t.disconnects
+    assert_true t.linked?
+  end
+
+  def test_a_held_print_on_a_linked_transport_skips_the_connect_and_still_checks_the_status
+    t = fake(replies: ok_replies)
+    held(t).run(job(10))
+    r = held(t).run(job(10))
+    assert_true r.ok
+    assert_equal 1, t.connects.size
+    assert_equal 2, t.subscribes.size
+    assert_equal 83, r.status["battery"]
+    assert_equal 10, r.job["rows"]
+  end
+
+  def test_a_held_print_on_an_unlinked_transport_connects
+    t = fake(replies: ok_replies)
+    held(t).run(job(10))
+    t.disconnect
+    held(t).run(job(10))
+    assert_equal 2, t.connects.size
+  end
+
+  def test_a_held_print_that_fails_drops_the_link
+    t = fake(replies: ok_replies.merge("\x1f\x11\x11" => "\x1a\x06\x88"))
+    r = held(t).run(job(10))
+    assert_equal "paper_out", r.error
+    assert_equal 1, t.disconnects
+    assert_false t.linked?
+  end
+
   def test_the_status_of_a_print_comes_from_the_precheck_replies
     t = fake(replies: ok_replies)
     r = session(t).run(job(10))
